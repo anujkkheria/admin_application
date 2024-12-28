@@ -35,10 +35,6 @@ const userSchema = new mongoose.Schema({
     required: true,
     minlength: 8,
   },
-  organization: {
-    type: String,
-    required: true,
-  },
 })
 
 userSchema.pre('save', async function (next) {

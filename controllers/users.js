@@ -9,26 +9,15 @@ export const getall = async (req, res) => {
   }
 }
 
-export const getUsersbyOrg = async (req, res) => {
-  const organization = req.params.organization
-  try {
-    const users = await user.find({ organization })
-    res.send(200).json(users)
-  } catch (e) {
-    res.send(400).json({ message: e.message })
-  }
-}
-
 export const updateUser = async (req, res) => {
-  const { name, email, organization, role } = req.body
-  const id = req.params.id
+  const { name, email, role } = req.body
+  const id = req.query.id
   try {
-    const user = user.findbyIdAndUpdate(
+    const updatedUser = await user.findByIdAndUpdate(
       id,
       {
         name,
         email,
-        organization,
         role,
       },
       {
@@ -36,7 +25,8 @@ export const updateUser = async (req, res) => {
         runValidators: true,
       }
     )
+    res.status(200).json(updatedUser)
   } catch (e) {
-    res.send(400).json({ message: e.message })
+    res.status(400).json({ message: e.message })
   }
 }

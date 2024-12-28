@@ -1,5 +1,5 @@
 import express from 'express'
-import { getall } from '../controllers/users'
+import { getall, updateUser } from '../controllers/users.js'
 
 const router = express.Router()
 router.route('/').get((req, res) => {
@@ -8,4 +8,5 @@ router.route('/').get((req, res) => {
   })
 })
 router.route('/getall').get(getall)
+router.route('/profile').put(updateUser)
 export default router
