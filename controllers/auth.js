@@ -1,8 +1,9 @@
 import { user } from '../schema/userSchema.js'
+import logger from '../utils/logger.js'
 import sgMail from '@sendgrid/mail'
 import jwt from 'jsonwebtoken'
 sgMail.setApiKey(process.env.EMAIL_APIKEY)
-export const Signup = async (req, res, next) => {
+export const Signup = async (req, res) => {
   try {
     console.log({ ...req.body })
     const newUser = await user.create({ ...req.body })
@@ -17,27 +18,47 @@ export const Signup = async (req, res, next) => {
         user: newUser,
       },
     })
+    logger.info({
+      actionType: 'Signup',
+      userId: user._id,
+      email,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
   } catch (e) {
-    console.log(e)
-    console.log(req.body)
+    res.status(500).json({ message: e.message })
+    console.log(req)
   }
 }
 
-export const Login = async (req, res, next) => {
+export const Login = async (req, res) => {
   try {
     const { email, password } = req.body
     if (email && password) {
       const User = await user.findOne({ email }).select('+password')
-      console.log(User)
       if (User) {
         const token = jwt.sign({ id: User._id }, process.env.JWT_SECRET, {
           expiresIn: process.env.JWT_EXPIRESIN,
         })
-        console.log(User.id)
         const authenticated = await User.comparePassword(
           User.password,
           password
         )
+        authenticated
+          ? logger.info({
+              actionType: 'User Login Success',
+              userId: User._id,
+              email,
+              ip: req.ip,
+              endpoint: req.originalUrl,
+            })
+          : logger.info({
+              actionType: 'Login worng info',
+              userId: User._id,
+              email,
+              ip: req.ip,
+              endpoint: req.originalUrl,
+            })
         authenticated
           ? res.status(200).json({
               message: 'logged in',
@@ -54,15 +75,22 @@ export const Login = async (req, res, next) => {
       }
     }
   } catch (e) {
+    logger.warn({
+      actionType: 'User Login Failed',
+      email: req.body.email,
+      error: error.message,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
     res.status(500).json({ message: e.message })
   }
 }
 
 export const requestreset = async (req, res) => {
   const { email } = req.body
-  // if (!email) {
-  //   res.send(400).json({ message: 'bad request' })
-  // }
+  if (!email) {
+    res.send(400).json({ message: 'bad request' })
+  }
   try {
     const User = user.findOne({ email })
     if (!user) {
@@ -89,10 +117,21 @@ export const requestreset = async (req, res) => {
     }
     await sgMail.send(mailOptions)
     // await transporter.sendMail(mailOptions)
-
-    return res.status(200).json({ message: 'done' })
+    logger.info({
+      actionType: 'Password Reset Request',
+      email,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
+    res.status(200).json({ message: 'done' })
   } catch (e) {
     console.log(e, process.env.RESET_EMAIL, process.env.RESET_PASS)
-    return res.Status(400)
+    logger.error({
+      actionType: 'Password Reset Failed',
+      error: error.message,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
+    res.Status(400)
   }
 }
