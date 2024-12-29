@@ -11,7 +11,7 @@ export const Signup = async (req, res) => {
       expiresIn: process.env.JWT_EXPIRESIN,
     })
     console.log(newUser)
-    res.status(201).json({
+    return res.status(201).json({
       status: 'success',
       token,
       body: {
@@ -26,7 +26,7 @@ export const Signup = async (req, res) => {
       endpoint: req.originalUrl,
     })
   } catch (e) {
-    res.status(500).json({ message: e.message })
+    return res.status(500).json({ message: e.message })
     console.log(req)
   }
 }
@@ -44,34 +44,34 @@ export const Login = async (req, res) => {
           User.password,
           password
         )
-        authenticated
-          ? logger.info({
-              actionType: 'User Login Success',
-              userId: User._id,
-              email,
-              ip: req.ip,
-              endpoint: req.originalUrl,
-            })
-          : logger.info({
-              actionType: 'Login worng info',
-              userId: User._id,
-              email,
-              ip: req.ip,
-              endpoint: req.originalUrl,
-            })
-        authenticated
-          ? res.status(200).json({
-              message: 'logged in',
-              body: {
-                id: User._id,
-                name: User.name,
-                email: User.email,
-                token,
-              },
-            })
-          : res.status(402).json({
-              message: 'wrong email/password',
-            })
+        if (!authenticated) {
+          logger.info({
+            actionType: 'Login worng info',
+            userId: User._id,
+            email,
+            ip: req.ip,
+            endpoint: req.originalUrl,
+          })
+          res.status(402).json({
+            message: 'wrong email/password',
+          })
+        }
+        logger.info({
+          actionType: 'User Login Success',
+          userId: User._id,
+          email,
+          ip: req.ip,
+          endpoint: req.originalUrl,
+        })
+        return res.status(200).json({
+          message: 'logged in',
+          body: {
+            id: User._id,
+            name: User.name,
+            email: User.email,
+            token,
+          },
+        })
       }
     }
   } catch (e) {
@@ -82,19 +82,19 @@ export const Login = async (req, res) => {
       ip: req.ip,
       endpoint: req.originalUrl,
     })
-    res.status(500).json({ message: e.message })
+    return res.status(500).json({ message: e.message })
   }
 }
 
 export const requestreset = async (req, res) => {
   const { email } = req.body
   if (!email) {
-    res.send(400).json({ message: 'bad request' })
+    return res.send(400).json({ message: 'bad request' })
   }
   try {
     const User = user.findOne({ email })
     if (!user) {
-      res.send(200)
+      return res.send(200)
     }
     const token = jwt.sign({ id: User._id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRESIN,
@@ -123,7 +123,7 @@ export const requestreset = async (req, res) => {
       ip: req.ip,
       endpoint: req.originalUrl,
     })
-    res.status(200).json({ message: 'done' })
+    return res.status(200).json({ message: 'done' })
   } catch (e) {
     console.log(e, process.env.RESET_EMAIL, process.env.RESET_PASS)
     logger.error({
@@ -132,6 +132,6 @@ export const requestreset = async (req, res) => {
       ip: req.ip,
       endpoint: req.originalUrl,
     })
-    res.Status(400)
+    return res.Status(400)
   }
 }

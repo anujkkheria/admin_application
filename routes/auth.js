@@ -3,7 +3,7 @@ import { Signup, Login, requestreset } from '../controllers/auth.js'
 
 const router = express.Router()
 router.route('/').get((req, res) => {
-  res.status(200).json({ message: 'req recevied on auth' })
+  return res.status(200).json({ message: 'req recevied on auth' })
   console.log('you reached the route')
 })
 router.route('/Signup').post(Signup)
