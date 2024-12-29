@@ -12,7 +12,7 @@ export function logAction(actionType) {
         timestamp: new Date(),
       }
 
-      logger.info(logData) // Log the data
+      logger.info(logData)
       next()
     } catch (error) {
       console.error('Logging error:', error)

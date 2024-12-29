@@ -5,12 +5,18 @@ import jwt from 'jsonwebtoken'
 sgMail.setApiKey(process.env.EMAIL_APIKEY)
 export const Signup = async (req, res) => {
   try {
-    console.log({ ...req.body })
     const newUser = await user.create({ ...req.body })
     const token = jwt.sign({ id: newUser.id }, process.env.JWT_SECRET, {
       expiresIn: process.env.JWT_EXPIRESIN,
     })
     console.log(newUser)
+    logger.info({
+      actionType: 'Signup',
+      userId: newUser._id,
+      email,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
     return res.status(201).json({
       status: 'success',
       token,
@@ -18,16 +24,9 @@ export const Signup = async (req, res) => {
         user: newUser,
       },
     })
-    logger.info({
-      actionType: 'Signup',
-      userId: user._id,
-      email,
-      ip: req.ip,
-      endpoint: req.originalUrl,
-    })
   } catch (e) {
-    return res.status(500).json({ message: e.message })
     console.log(req)
+    return res.status(500).json({ message: e.message })
   }
 }
 
@@ -52,7 +51,7 @@ export const Login = async (req, res) => {
             ip: req.ip,
             endpoint: req.originalUrl,
           })
-          res.status(402).json({
+          return res.status(401).json({
             message: 'wrong email/password',
           })
         }
@@ -78,7 +77,7 @@ export const Login = async (req, res) => {
     logger.warn({
       actionType: 'User Login Failed',
       email: req.body.email,
-      error: error.message,
+      error: e.message,
       ip: req.ip,
       endpoint: req.originalUrl,
     })
@@ -109,11 +108,11 @@ export const requestreset = async (req, res) => {
     //   },
     // })
     const mailOptions = {
-      to: 'anujkheria1@gmail.com',
+      to: email,
       from: process.env.RESET_EMAIL,
       subject: 'password reset request',
       text: `You are receiveing this email to reset password copy and paste the url ${resetUrl} \n ignore this mail if not requested by you`,
-      html: `<p>You are receiveing this email to reset password copy and paste the url <a href="${resetUrl}" target="_blank"> reset link</a> </p> ignore this mail if not requested by you`,
+      html: `<p>You are receiveing this email to reset password copy and paste the url <a href="${resetUrl}" target="_blank">reset link</a> ignore this mail if not requested by you</p>`,
     }
     await sgMail.send(mailOptions)
     // await transporter.sendMail(mailOptions)
@@ -128,10 +127,80 @@ export const requestreset = async (req, res) => {
     console.log(e, process.env.RESET_EMAIL, process.env.RESET_PASS)
     logger.error({
       actionType: 'Password Reset Failed',
-      error: error.message,
+      error: e.message,
       ip: req.ip,
       endpoint: req.originalUrl,
     })
     return res.Status(400)
+  }
+}
+
+export const resetpassword = async (req, res) => {
+  const { token, userId } = req.query
+  const { password, confirmPassword } = req.body
+
+  if (!token || !password || !confirmPassword) {
+    return res.status(400).json({
+      message: 'Missing required fields',
+    })
+  }
+
+  if (password !== confirmPassword) {
+    return res.status(400).json({
+      message: 'Passwords do not match',
+    })
+  }
+
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    if (decoded.id !== userId) {
+      return res.status(401).json({
+        message: 'Invalid token',
+      })
+    }
+
+    // Find and update user
+    const User = await user.findById(userId)
+    if (!User) {
+      return res.status(404).json({
+        message: 'User not found',
+      })
+    }
+
+    // Update password
+    User.password = password
+    User.confirmPassword = confirmPassword
+    await User.save()
+
+    logger.info({
+      actionType: 'Password Reset Success',
+      userId: User._id,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
+
+    return res.status(200).json({
+      message: 'Password reset successful',
+    })
+  } catch (e) {
+    logger.error({
+      actionType: 'Password Reset Failed',
+      userId,
+      error: e.message,
+      ip: req.ip,
+      endpoint: req.originalUrl,
+    })
+
+    if (e.name === 'JsonWebTokenError') {
+      return res.status(401).json({
+        message: 'Invalid or expired token',
+      })
+    }
+
+    return res.status(500).json({
+      message: 'Password reset failed',
+      error: e.message,
+    })
   }
 }
