@@ -1,5 +1,5 @@
 import express from 'express'
-import { Signup, Login } from '../controllers/auth.js'
+import { Signup, Login, requestreset } from '../controllers/auth.js'
 
 const router = express.Router()
 router.route('/').get((req, res) => {
@@ -7,7 +7,7 @@ router.route('/').get((req, res) => {
   console.log('you reached the route')
 })
 router.route('/Signup').post(Signup)
-
 router.route('/Login').post(Login)
+router.route('/requestreset').post(requestreset)
 
 export default router
